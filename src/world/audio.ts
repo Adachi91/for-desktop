@@ -15,29 +15,42 @@ if (originalGetUserMedia) {
       : {};
 
     const requestedAudio = normalisedConstraints.audio;
+    let enhancedAudioConstraints: MediaTrackConstraints | undefined;
 
     if (requestedAudio) {
-      const enhancedAudioConstraints: MediaTrackConstraints = {
-        noiseSuppression: true,
-        echoCancellation: true,
-        autoGainControl: true,
-        ...(typeof requestedAudio === "boolean" ? {} : requestedAudio),
-      };
+      enhancedAudioConstraints =
+        typeof requestedAudio === "boolean"
+          ? {
+              noiseSuppression: true,
+              echoCancellation: true,
+              autoGainControl: true,
+            }
+          : { ...requestedAudio };
+
+      if (enhancedAudioConstraints.noiseSuppression === undefined) {
+        enhancedAudioConstraints.noiseSuppression = true;
+      }
+
+      if (enhancedAudioConstraints.echoCancellation === undefined) {
+        enhancedAudioConstraints.echoCancellation = true;
+      }
+
+      if (enhancedAudioConstraints.autoGainControl === undefined) {
+        enhancedAudioConstraints.autoGainControl = true;
+      }
 
       normalisedConstraints.audio = enhancedAudioConstraints;
     }
 
     const stream = await originalGetUserMedia(normalisedConstraints);
 
-    if (requestedAudio) {
+    if (requestedAudio && enhancedAudioConstraints) {
+      const constraintsToApply = enhancedAudioConstraints;
+
       await Promise.all(
-        stream.getAudioTracks().map((track) =>
-          track.applyConstraints({
-            noiseSuppression: true,
-            echoCancellation: true,
-            autoGainControl: true,
-          }),
-        ),
+        stream
+          .getAudioTracks()
+          .map((track) => track.applyConstraints(constraintsToApply)),
       ).catch(() => {
         // applyConstraints() is best-effort – ignore unsupported backends.
       });
