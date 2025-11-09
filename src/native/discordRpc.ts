@@ -3,7 +3,7 @@ import { Client } from "discord-rpc";
 import { config } from "./config";
 
 // internal state
-let rpc: Client;
+let rpc: Client | undefined;
 
 export async function initDiscordRpc() {
   if (!config.discordRpc) return;
@@ -35,8 +35,17 @@ export async function initDiscordRpc() {
   }
 }
 
-const reconnect = () => setTimeout(() => initDiscordRpc(), 1e4);
+const reconnect = () => {
+  // Destroy the previous client so we do not keep stale IPC pipes alive. The
+  // Discord RPC transport retries aggressively when a zombie client holds the
+  // connection open, leading to a noisy connect/disconnect loop on Windows.
+  rpc?.destroy();
+  rpc = undefined;
+
+  setTimeout(() => initDiscordRpc(), 1e4);
+};
 
 export async function destroyDiscordRpc() {
   rpc?.destroy();
+  rpc = undefined;
 }
