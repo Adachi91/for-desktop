@@ -105,7 +105,13 @@ export function createMainWindow() {
   });
 
   // send the config
-  mainWindow.webContents.on("did-finish-load", () => config.sync());
+  mainWindow.webContents.on("did-finish-load", () => {
+    config.sync();
+
+    if (!mainWindow.webContents.isDevToolsOpened()) {
+      mainWindow.webContents.openDevTools({ mode: "detach" });
+    }
+  });
 
   // configure spellchecker context menu
   mainWindow.webContents.on("context-menu", (_, params) => {
@@ -156,8 +162,6 @@ export function createMainWindow() {
     mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize(),
   );
   ipcMain.on("close", () => mainWindow.close());
-
-  // mainWindow.webContents.openDevTools();
 
   // let i = 0;
   // setInterval(() => setBadgeCount((++i % 30) + 1), 1000);
